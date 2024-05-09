@@ -29,7 +29,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jsancosta.hedgehog.ui.shared.GenericDialog
 import com.jsancosta.hedgehog.ui.shared.SwipeToDeleteContainer
 import com.jsancosta.hedgehog.ui.theme.HeadhogTheme
@@ -48,7 +46,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun TaskListScreen(
     name: String,
-    viewModel: TaskListViewModel = viewModel(),
+    tasks: List<Task>,
+    onSaveClick: (title: String, description: String, cb: (result: Boolean) -> Unit) -> Unit,
+    onTaskCheckedChange: (task: Task, isChecked: Boolean) -> Unit,
+    onDelete: (task: Task) -> Unit,
+    onEdit: (id: String, title: String, description: String) -> Unit,
 ) {
     val showDialog = remember { mutableStateOf(false) }
     val task by remember { mutableStateOf(Task()) }
@@ -63,22 +65,19 @@ fun TaskListScreen(
                 showDialog.value = false
             },
             onSaveClick = { title, description ->
-                showDialog.value = false
-                viewModel.addTask(
-                    mapOf(
-                        "title" to title,
-                        "description" to description
-                    )
-                )
-                coroutineScope.launch {
-                    viewModel.taskAdded.collect {
-                        if (it) {
-                            snackbarHostState.showSnackbar(
-                                message = "Task Added with success",
-                                withDismissAction = true,
-                                duration = SnackbarDuration.Short,
-                            )
+                onSaveClick(title, description) {
+                    coroutineScope.launch {
+                        val snackbarMessage = if (it) {
+                            "Task added with success"
+                        } else {
+                            "Cannot add the task"
                         }
+                        showDialog.value = false
+                        snackbarHostState.showSnackbar(
+                            message = snackbarMessage,
+                            withDismissAction = true,
+                            duration = SnackbarDuration.Short,
+                        )
                     }
                 }
             }
@@ -111,19 +110,11 @@ fun TaskListScreen(
         ) {
             Column {
                 TaskHeader(name)
-                TaskList(viewModel.tasks.collectAsState().value,
-                    onTaskCheckedChange = { task, isChecked ->
-                        viewModel.setTaskAsDone(task, isChecked)
-                    },
-                    onDelete = { task ->
-                        viewModel.deleteTask(task)
-                    },
-                    onEdit = { id, title, description ->
-                        viewModel.updateTask(
-                            id,
-                            mapOf("title" to title, "description" to description)
-                        )
-                    }
+                TaskList(
+                    tasks,
+                    onTaskCheckedChange,
+                    onDelete,
+                    onEdit
                 )
             }
         }
@@ -297,7 +288,14 @@ fun TaskList(
 @Composable
 fun TaskListScreenPreview() {
     HeadhogTheme {
-        TaskListScreen("Joanã")
+        TaskListScreen(
+            "Joanã",
+            listOf(Task("201234", "Test", "Test", true)),
+            onSaveClick = { _, _, _ -> },
+            onTaskCheckedChange = { _, _ -> },
+            onEdit = { _, _, _ -> },
+            onDelete = { _ -> },
+        )
     }
 }
 

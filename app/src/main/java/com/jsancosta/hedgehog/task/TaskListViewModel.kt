@@ -1,5 +1,6 @@
 package com.jsancosta.hedgehog.task
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,8 +17,6 @@ data class Task(
 class TaskListViewModel : ViewModel() {
     private val _tasks = MutableStateFlow(listOf<Task>())
     val tasks = _tasks.asStateFlow()
-    private val _taskAddedFlow = MutableStateFlow(false)
-    val taskAdded = _taskAddedFlow.asStateFlow()
 
     init {
         loadTasks()
@@ -56,15 +55,20 @@ class TaskListViewModel : ViewModel() {
         }
     }
 
-    fun addTask(values: Map<String, String>) {
-        _tasks.update { tasks ->
-            tasks + Task(
-                id = generateId(),
-                title = values["title"] ?: "",
-                description = values["description"] ?: "",
-            )
+    fun addTask(values: Map<String, String>): Boolean {
+        try {
+            _tasks.update { tasks ->
+                tasks + Task(
+                    id = generateId(),
+                    title = values["title"] ?: "",
+                    description = values["description"] ?: "",
+                )
+            }
+            return true
+        } catch (e: Exception) {
+            Log.e("TaskListViewModel", "addTask: error on adding task: ${e.message}")
+            return false
         }
-        _taskAddedFlow.value = true
     }
 
     private fun loadTasks() {
